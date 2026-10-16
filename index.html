@@ -184,6 +184,8 @@
   .toast.show{opacity:1;transform:translate(-50%,0)}
 
   @media (max-width:560px){
+    .topbar{top:10px;right:10px;left:10px;justify-content:flex-end}
+    .pill-btn{padding:8px 10px;font-size:11px}
     .card{padding:36px 18px 20px;border-radius:24px}
     .grid{grid-template-columns:1fr}
     .bio{font-size:15.5px}
@@ -199,6 +201,7 @@
 <div class="vignette"></div>
 
 <div class="topbar">
+  <button class="pill-btn" id="sceneBtn" title="Arka plan"><span data-i18n="sceneL">Sahne</span> <b id="sceneName">Kutup ışığı</b></button>
   <button class="pill-btn" id="motionBtn" title="Animasyon"><span data-i18n="motion">Hareket</span> <b id="motionState">açık</b></button>
   <button class="pill-btn" id="langBtn" title="Dil / Language"><b id="langCur">TR</b> / <span id="langAlt">EN</span></button>
 </div>
@@ -285,12 +288,12 @@
 <script>
 (() => {
   const USER = "mertyesileducation";
-  const SELF_REPO = "mertyesileducaiton.github.io";
+  const SELF_REPOS = ["mertyesileducaiton.github.io", "mertyesileducation.github.io"];
 
   /* ---------------- i18n ---------------- */
   const T = {
     tr: {
-      motion:"Hareket", on:"açık", off:"kapalı",
+      motion:"Hareket", on:"açık", off:"kapalı", sceneL:"Sahne", galaxy:"Galaksi", aurora:"Kutup ışığı", hole:"Kara delik",
       r1:"Web Geliştirici", r2:"Eğitim Teknolojileri", r3:"Akıllı Tahta", r4:"Güvenlik (2FA)", r5:"Ofis Uygulamaları",
       loc:"Türkiye", sRepos:"Proje", sStars:"Yıldız", sDays:"Son push", loading:"Yükleniyor…",
       projects:"Projeler", all:"Tümü", fEdu:"Eğitim", fOffice:"Ofis", fTool:"Araç",
@@ -309,7 +312,7 @@
       }
     },
     en: {
-      motion:"Motion", on:"on", off:"off",
+      motion:"Motion", on:"on", off:"off", sceneL:"Scene", galaxy:"Galaxy", aurora:"Aurora", hole:"Black hole",
       r1:"Web Developer", r2:"EdTech", r3:"Smart Board", r4:"Security (2FA)", r5:"Office Apps",
       loc:"Türkiye", sRepos:"Projects", sStars:"Stars", sDays:"Last push", loading:"Loading…",
       projects:"Projects", all:"All", fEdu:"Education", fOffice:"Office", fTool:"Tools",
@@ -446,8 +449,11 @@
     if (user.status==="fulfilled") gh.user = user.value;
     if (events.status==="fulfilled") gh.events = events.value;
     if (repos.status==="fulfilled"){
+      // drop hard-coded projects that were deleted or made private
+      const live = new Set(repos.value.map(r => r.name));
+      for (let i=PROJECTS.length-1;i>=0;i--) if (!live.has(PROJECTS[i].name)) PROJECTS.splice(i,1);
       for (const r of repos.value){
-        if (r.fork || r.name===SELF_REPO) continue;
+        if (r.fork || SELF_REPOS.includes(r.name)) continue;
         const p = PROJECTS.find(x => x.name===r.name);
         if (p){ p.stars = r.stargazers_count; p.updated = r.pushed_at || r.updated_at; p.lang = r.language || p.lang; }
         else PROJECTS.push({ name:r.name, title:r.name, description:r.description, icon:"system", cat:"tool",
@@ -488,6 +494,7 @@
     document.getElementById("langCur").textContent = lang.toUpperCase();
     document.getElementById("langAlt").textContent = lang==="tr" ? "EN" : "TR";
     document.getElementById("motionState").textContent = motion ? t("on") : t("off");
+    document.getElementById("sceneName").textContent = t(scene);
   }
   function renderAll(){ applyLang(); renderProjects(); renderStats(); renderGh(); }
 
@@ -519,7 +526,7 @@
     card.style.transform = `perspective(1400px) rotateY(${x*3}deg) rotateX(${-y*3}deg)`;
   });
 
-  /* ---------------- space: stars + black hole ---------------- */
+  /* ---------------- background: stars + scenes ---------------- */
   const cv = document.getElementById("space"), cx = cv.getContext("2d");
   let W, H, DPR, stars = [], disk = [], streaks = [], mouse = { x:0, y:0, tx:0, ty:0 };
   let motion = (() => { try { return localStorage.getItem("motion") !== "off" } catch { return true } })();
@@ -541,6 +548,7 @@
       const r = R*(1.55 + 5.2*u*u); // denser near the inner edge
       return { r, a:Math.random()*Math.PI*2, s:.9+Math.random()*.2, sz: Math.random()<.92 ? .9 : 1.8 };
     });
+    buildGalaxy(); buildAurora();
   }
   function hole(){
     const R = Math.max(42, Math.min(W, H) * (W<600 ? .16 : .19));
@@ -551,40 +559,91 @@
     return `rgba(${r},${g},${Math.max(b,20)},${bright})`;
   }
 
-  let last = performance.now(), time = 0;
-  function frame(now){
-    const dt = Math.min(50, now-last)/1000; last = now;
-    if (motion) time += dt;
-    mouse.x += (mouse.tx-mouse.x)*.05; mouse.y += (mouse.ty-mouse.y)*.05;
+  /* ---------------- scenes ---------------- */
+  const SCENES = ["aurora","galaxy","hole"];
+  let scene = (() => { try { const v = localStorage.getItem("scene"); return SCENES.includes(v) ? v : "aurora" } catch { return "aurora" } })();
+  let galaxy = [], galaxyBuckets = [], ridges = [], auroraSprites = [];
 
-    cx.globalCompositeOperation = "source-over";
-    cx.fillStyle = "#05060a"; cx.fillRect(0,0,W,H);
+  const GAL_COLORS = [ // [r,g,b] from core to rim, plus pink star-forming knots
+    [255,236,200],[255,214,160],[250,190,170],[214,170,230],[170,170,255],[140,180,255],[120,200,255]
+  ];
+  function buildGalaxy(){
+    const n = W<600 ? 4500 : 11000, Rg = Math.max(W, H)*.5;
+    // 7 colours x 6 alpha levels + pink knots = buckets, each drawn as one path
+    galaxyBuckets = [];
+    for (let c=0;c<GAL_COLORS.length;c++) for (let a=0;a<6;a++){
+      const [r,g,b] = GAL_COLORS[c];
+      galaxyBuckets.push({ style:`rgba(${r},${g},${b},${(.22 + a*.15).toFixed(2)})`, pts:[] });
+    }
+    const pinkBase = galaxyBuckets.length;
+    for (let a=0;a<3;a++) galaxyBuckets.push({ style:`rgba(255,120,190,${.35 + a*.25})`, pts:[] });
+    const gauss = () => (Math.random()+Math.random()+Math.random()-1.5)/1.5;
+    galaxy = Array.from({length:n}, (_, i) => {
+      const arm = i % 2;
+      const u = Math.random();
+      const rn = Math.pow(u, .9);                 // more stars toward the core
+      const r = Rg * (.02 + rn);
+      const disk = Math.random() < .3;                // 30% diffuse disk, rest in arms
+      const spread = .38 - rn*.16;
+      const th = disk ? Math.random()*Math.PI*2 : arm*Math.PI + rn*4.8 + gauss()*spread + gauss()*.12/(rn+.08);
+      const ci = Math.min(GAL_COLORS.length-1, Math.floor(rn*GAL_COLORS.length + Math.random()*.8));
+      const bright = Math.max(0, Math.min(5, Math.round((1-rn)*4 + Math.random()*2.2)));
+      const pink = rn > .2 && Math.random() < .03;
+      return { r, th, b: pink ? pinkBase + (Math.random()*3|0) : ci*6 + bright, sz: Math.random()<.9 ? 1 : 1.8, z: (Math.random()-.5)*Rg*.06*(1-rn) };
+    });
+  }
+  function buildAurora(){
+    // vertical colour strips, stretched over each column of a curtain
+    const mk = (stops) => {
+      const c = document.createElement("canvas"); c.width = 1; c.height = 256;
+      const g = c.getContext("2d"), gr = g.createLinearGradient(0,256,0,0);
+      stops.forEach(([o,col]) => gr.addColorStop(o,col));
+      g.fillStyle = gr; g.fillRect(0,0,1,256); return c;
+    };
+    auroraSprites = [
+      mk([[0,"rgba(120,255,190,0)"],[.04,"rgba(150,255,200,.95)"],[.25,"rgba(60,240,150,.55)"],[.6,"rgba(40,180,170,.18)"],[1,"rgba(140,80,255,0)"]]),
+      mk([[0,"rgba(90,230,255,0)"],[.05,"rgba(120,240,255,.7)"],[.35,"rgba(60,170,255,.3)"],[1,"rgba(120,60,255,0)"]]),
+      mk([[0,"rgba(255,110,200,0)"],[.06,"rgba(255,130,210,.55)"],[.4,"rgba(170,90,255,.25)"],[1,"rgba(80,40,200,0)"]])
+    ];
+    // two mountain ridges via midpoint displacement
+    const ridge = (base, rough, seed) => {
+      const N = 128, pts = new Array(N+1).fill(0);
+      let rnd = seed; const rand = () => (rnd = (rnd*16807) % 2147483647) / 2147483647;
+      pts[0] = rand(); pts[N] = rand();
+      for (let step=N; step>1; step/=2){
+        for (let i=0;i<N;i+=step){
+          const m = i + step/2;
+          pts[m] = (pts[i]+pts[i+step])/2 + (rand()-.5)*rough*step/N;
+        }
+      }
+      return { base, pts };
+    };
+    ridges = [ ridge(.80, 1.1, 7), ridge(.88, .9, 29) ];
+  }
 
-    // nebula haze
-    const h = hole();
-    const neb = cx.createRadialGradient(h.x, h.y, h.R*.5, h.x, h.y, Math.max(W,H)*.7);
-    neb.addColorStop(0,"rgba(255,140,60,.10)"); neb.addColorStop(.35,"rgba(120,60,160,.05)"); neb.addColorStop(1,"rgba(0,0,0,0)");
-    cx.fillStyle = neb; cx.fillRect(0,0,W,H);
-
-    // stars with parallax + gentle lensing push away from hole
+  function drawStars(dt, opts={}){
+    const { maxY = H, lens = null } = opts;
     for (const s of stars){
       let x = s.x + mouse.x*-30*s.z, y = s.y + mouse.y*-30*s.z;
-      const dx = x-h.x, dy = y-h.y, d2 = dx*dx+dy*dy, d = Math.sqrt(d2);
-      const push = (h.R*h.R*1.1)/(d+1);
-      x += dx/d*push; y += dy/d*push;
-      if (d < h.R*1.05) continue;
+      if (y > maxY) continue;
+      if (lens){
+        const dx = x-lens.x, dy = y-lens.y, d = Math.sqrt(dx*dx+dy*dy);
+        const push = (lens.R*lens.R*1.1)/(d+1);
+        x += dx/d*push; y += dy/d*push;
+        if (d < lens.R*1.05) continue;
+      }
       const tw = .55 + .45*Math.sin(time*s.ts + s.tw);
-      cx.globalAlpha = (.25 + .75*s.z) * tw;
+      cx.globalAlpha = (.25 + .75*s.z) * tw * (opts.fade ? Math.max(0, 1 - y/maxY*.6) : 1);
       cx.fillStyle = s.hue;
       const sz = .5 + s.z*1.4;
       cx.fillRect(x, y, sz, sz);
     }
     cx.globalAlpha = 1;
-
-    // streaks (dust flying past)
+  }
+  function drawStreaks(dt, ox, oy){
     if (motion && Math.random() < .05 && streaks.length < 8){
       const ang = Math.random()*Math.PI*2, dist = Math.max(W,H)*.7;
-      streaks.push({ x:h.x+Math.cos(ang)*dist, y:h.y+Math.sin(ang)*dist, ang, life:1 });
+      streaks.push({ x:ox+Math.cos(ang)*dist, y:oy+Math.sin(ang)*dist, ang, life:1 });
     }
     cx.lineCap = "round";
     for (let i=streaks.length-1;i>=0;i--){
@@ -594,6 +653,118 @@
       cx.strokeStyle = `rgba(255,255,255,${.35*s.life})`; cx.lineWidth = 1;
       cx.beginPath(); cx.moveTo(s.x,s.y); cx.lineTo(s.x+Math.cos(s.ang)*16, s.y+Math.sin(s.ang)*16); cx.stroke();
     }
+  }
+
+  /* ---- scene: spiral galaxy ---- */
+  function drawGalaxy(dt){
+    cx.globalCompositeOperation = "source-over";
+    const bg = cx.createLinearGradient(0,0,W,H);
+    bg.addColorStop(0,"#04040c"); bg.addColorStop(.5,"#070816"); bg.addColorStop(1,"#0a0614");
+    cx.fillStyle = bg; cx.fillRect(0,0,W,H);
+    drawStars(dt);
+
+    const gx = W*.5 + mouse.x*-18, gy = H*.44 + mouse.y*-12;
+    const rot = time*.035, tilt = .42, tiltRot = -.38;
+    const ct = Math.cos(tiltRot), st = Math.sin(tiltRot);
+    const Rg = Math.max(W,H)*.5;
+
+    cx.globalCompositeOperation = "lighter";
+    // diffuse disk light
+    cx.save(); cx.translate(gx, gy); cx.rotate(tiltRot); cx.scale(1, tilt);
+    const halo = cx.createRadialGradient(0,0,0, 0,0,Rg*.9);
+    halo.addColorStop(0,"rgba(255,220,180,.45)"); halo.addColorStop(.15,"rgba(220,150,200,.18)");
+    halo.addColorStop(.5,"rgba(90,110,220,.09)"); halo.addColorStop(1,"rgba(0,0,0,0)");
+    cx.fillStyle = halo; cx.beginPath(); cx.arc(0,0,Rg*.9,0,Math.PI*2); cx.fill();
+    cx.restore();
+
+    for (const b of galaxyBuckets) b.pts.length = 0;
+    for (const p of galaxy){
+      const a = p.th + rot;
+      const x0 = p.r*Math.cos(a), y0 = p.r*Math.sin(a)*tilt + p.z;
+      const x = gx + x0*ct - y0*st, y = gy + x0*st + y0*ct;
+      if (x < -4 || x > W+4 || y < -4 || y > H+4) continue;
+      galaxyBuckets[p.b].pts.push(x, y, p.sz);
+    }
+    for (const b of galaxyBuckets){
+      if (!b.pts.length) continue;
+      cx.fillStyle = b.style; cx.beginPath();
+      const q = b.pts;
+      for (let i=0;i<q.length;i+=3) cx.rect(q[i], q[i+1], q[i+2], q[i+2]);
+      cx.fill();
+    }
+
+    // bright core
+    const core = cx.createRadialGradient(gx, gy, 0, gx, gy, Rg*.14);
+    core.addColorStop(0,"rgba(255,248,230,.95)"); core.addColorStop(.18,"rgba(255,220,170,.55)");
+    core.addColorStop(.5,"rgba(255,170,120,.15)"); core.addColorStop(1,"rgba(0,0,0,0)");
+    cx.fillStyle = core; cx.fillRect(gx-Rg*.14, gy-Rg*.14, Rg*.28, Rg*.28);
+    cx.globalCompositeOperation = "source-over";
+    drawStreaks(dt, gx, gy);
+  }
+
+  /* ---- scene: aurora over mountains ---- */
+  function drawAurora(dt){
+    cx.globalCompositeOperation = "source-over";
+    const sky = cx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0,"#01030a"); sky.addColorStop(.55,"#04111c"); sky.addColorStop(1,"#0a2a2c");
+    cx.fillStyle = sky; cx.fillRect(0,0,W,H);
+    drawStars(dt, { maxY: H*.85, fade: true });
+
+    cx.globalCompositeOperation = "lighter";
+    const curtains = [
+      { sp:0, base:.42, amp:.10, hgt:.42, f:.0022, ph:0,   a:.85 },
+      { sp:1, base:.34, amp:.08, hgt:.30, f:.0031, ph:2.1, a:.55 },
+      { sp:2, base:.28, amp:.06, hgt:.26, f:.0017, ph:4.2, a:.40 }
+    ];
+    const step = W<600 ? 3 : 4, t = time;
+    for (const c of curtains){
+      const spr = auroraSprites[c.sp];
+      for (let x=-step; x<W+step; x+=step){
+        const X = x + mouse.x*-20;
+        const yb = H*(c.base + c.amp*Math.sin(X*c.f + t*.18 + c.ph) + .035*Math.sin(X*c.f*3.7 - t*.45 + c.ph));
+        const hh = H*c.hgt*(.65 + .35*Math.sin(X*c.f*1.9 + t*.25 + c.ph*1.3));
+        const fl = .5 + .5*Math.sin(X*.021 + t*1.6 + c.ph) * Math.sin(X*.0073 - t*.7);   // shimmering rays
+        const env = Math.pow(Math.sin(Math.min(1, Math.max(0, (X/W)*1.1 - .05))*Math.PI), .6); // fade at edges
+        const al = c.a * env * (.35 + .65*fl);
+        if (al < .02) continue;
+        cx.globalAlpha = al;
+        cx.drawImage(spr, x, yb - hh, step+1, hh);
+      }
+    }
+    cx.globalAlpha = 1;
+
+    // ground glow reflected on the horizon
+    const hz = cx.createLinearGradient(0,H*.7,0,H);
+    hz.addColorStop(0,"rgba(60,240,160,0)"); hz.addColorStop(1,"rgba(60,240,160,.10)");
+    cx.fillStyle = hz; cx.fillRect(0,H*.7,W,H*.3);
+
+    cx.globalCompositeOperation = "source-over";
+    ridges.forEach((r, k) => {
+      const N = r.pts.length-1, par = k ? 10 : 5;
+      cx.fillStyle = k ? "#020608" : "#06121a";
+      cx.beginPath(); cx.moveTo(-20, H);
+      for (let i=0;i<=N;i++){
+        const x = i/N*(W+40) - 20 + mouse.x*-par;
+        cx.lineTo(x, H*r.base - r.pts[i]*H*.16 + (k?H*.02:0));
+      }
+      cx.lineTo(W+20, H); cx.closePath(); cx.fill();
+    });
+    drawStreaks(dt, W*.5, -H*.2);
+  }
+
+  /* ---- scene: black hole ---- */
+  function drawHole(dt){
+    cx.globalCompositeOperation = "source-over";
+    cx.fillStyle = "#05060a"; cx.fillRect(0,0,W,H);
+
+    // nebula haze
+    const h = hole();
+    const neb = cx.createRadialGradient(h.x, h.y, h.R*.5, h.x, h.y, Math.max(W,H)*.7);
+    neb.addColorStop(0,"rgba(255,140,60,.10)"); neb.addColorStop(.35,"rgba(120,60,160,.05)"); neb.addColorStop(1,"rgba(0,0,0,0)");
+    cx.fillStyle = neb; cx.fillRect(0,0,W,H);
+
+    drawStars(dt, { lens: h });
+    drawStreaks(dt, h.x, h.y);
 
     const tilt = .2, R = h.R, rMin = R*1.55, rSpan = R*5.2;
     cx.globalCompositeOperation = "lighter";
@@ -664,6 +835,16 @@
     drawParticle(true);    // front half crosses in front of the shadow
 
     cx.globalCompositeOperation = "source-over";
+  }
+
+  let last = performance.now(), time = 0;
+  function frame(now){
+    const dt = Math.min(50, now-last)/1000; last = now;
+    if (motion) time += dt;
+    mouse.x += (mouse.tx-mouse.x)*.05; mouse.y += (mouse.ty-mouse.y)*.05;
+    if (scene === "galaxy") drawGalaxy(motion ? dt : 0);
+    else if (scene === "aurora") drawAurora(motion ? dt : 0);
+    else drawHole(motion ? dt : 0);
     if (motion) requestAnimationFrame(frame);
   }
   addEventListener("pointermove", e => { mouse.tx = e.clientX/innerWidth - .5; mouse.ty = e.clientY/innerHeight - .5; });
@@ -675,6 +856,14 @@
     applyLang(); typeLoop();
     if (motion){ last = performance.now(); requestAnimationFrame(frame); }
     else card.style.transform = "";
+  });
+
+  const sceneBtn = document.getElementById("sceneBtn");
+  sceneBtn.addEventListener("click", () => {
+    scene = SCENES[(SCENES.indexOf(scene)+1) % SCENES.length];
+    try { localStorage.setItem("scene", scene) } catch {}
+    streaks.length = 0; applyLang();
+    if (!motion) requestAnimationFrame(frame);
   });
 
   resize();
