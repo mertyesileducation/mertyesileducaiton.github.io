@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mert Yeşil</title>
+<meta name="description" content="Mert Yeşil — eğitim için yazılım geliştiren geliştirici. Projeler: MY-Eğitim, Present, EasyWrite, Mert-Auth, Akıllı Tahta.">
+<meta name="theme-color" content="#05060a">
+<meta property="og:title" content="Mert Yeşil">
+<meta property="og:description" content="Eğitim için yazılım geliştiriyorum.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2334d399'/%3E%3Cstop offset='1' stop-color='%2338bdf8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='url(%23g)'/%3E%3Ctext x='32' y='42' font-family='Arial' font-weight='800' font-size='26' text-anchor='middle' fill='%2305060a'%3EMY%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05060a;
+    --card:rgba(12,14,20,.42);
+    --card-solid:#0e1018;
+    --tile:rgba(255,255,255,.035);
+    --tile-hover:rgba(255,255,255,.07);
+    --line:rgba(255,255,255,.09);
+    --line-strong:rgba(255,255,255,.18);
+    --text:#f4f5f8;
+    --muted:#9aa0b0;
+    --dim:#6b7183;
+    --accent:#34d399;
+    --accent-2:#38bdf8;
+    --warm:#ffb37a;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{color-scheme:dark}
+  body{
+    background:var(--bg);color:var(--text);
+    font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    min-height:100vh;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;text-decoration:none}
+  canvas#space{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+  .vignette{position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%,transparent 40%,rgba(0,0,0,.65) 100%)}
+
+  /* top bar */
+  .topbar{position:fixed;top:16px;right:16px;z-index:5;display:flex;gap:8px}
+  .pill-btn{
+    font:500 12px/1 var(--mono);color:var(--muted);letter-spacing:.04em;
+    background:rgba(10,12,18,.6);border:1px solid var(--line);border-radius:999px;
+    padding:9px 12px;cursor:pointer;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    transition:color .2s,border-color .2s;display:flex;align-items:center;gap:6px
+  }
+  .pill-btn:hover{color:var(--text);border-color:var(--line-strong)}
+  .pill-btn b{color:var(--text);font-weight:500}
+
+  main{position:relative;z-index:2;display:flex;justify-content:center;padding:clamp(48px,9vh,110px) 16px 64px}
+  .card{
+    width:100%;max-width:580px;
+    background:var(--card);
+    border:1px solid var(--line);border-radius:28px;
+    padding:44px 30px 26px;
+    backdrop-filter:blur(18px) saturate(140%);-webkit-backdrop-filter:blur(18px) saturate(140%);
+    box-shadow:0 30px 80px -20px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,255,255,.06);
+    transform-style:preserve-3d;transition:transform .5s cubic-bezier(.2,.8,.2,1);
+    animation:rise .9s cubic-bezier(.2,.8,.2,1) both;
+  }
+  @keyframes rise{from{opacity:0;transform:translateY(24px) scale(.98)}to{opacity:1;transform:none}}
+
+  /* avatar */
+  .avatar-wrap{position:relative;width:124px;height:124px;margin:0 auto}
+  .avatar-ring{position:absolute;inset:-4px;border-radius:50%;
+    background:conic-gradient(from 0deg,var(--accent),var(--accent-2),#a78bfa,var(--warm),var(--accent));
+    animation:spin 6s linear infinite;filter:blur(.3px)}
+  .avatar-ring::after{content:"";position:absolute;inset:-14px;border-radius:50%;
+    background:inherit;filter:blur(22px);opacity:.35}
+  @keyframes spin{to{transform:rotate(1turn)}}
+  .avatar{position:absolute;inset:0;border-radius:50%;background:#0b0d14;border:4px solid #0b0d14;
+    display:grid;place-items:center;overflow:hidden}
+  .avatar svg{width:100%;height:100%}
+  .status-dot{position:absolute;right:6px;bottom:8px;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);border:4px solid #0b0d14;z-index:2}
+  .status-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--accent);
+    animation:ping 2s cubic-bezier(0,0,.2,1) infinite}
+  @keyframes ping{75%,100%{transform:scale(1.9);opacity:0}}
+
+  h1{
+    margin-top:22px;text-align:center;font-size:clamp(34px,7vw,44px);font-weight:800;letter-spacing:-.03em;
+    background:linear-gradient(180deg,#fff 20%,#ffd8b0 120%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .handle{text-align:center;font:400 13px var(--mono);color:var(--dim);margin-top:4px}
+
+  .roles{display:flex;justify-content:center;margin-top:18px}
+  .roles-inner{display:flex;gap:2px;padding:5px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03)}
+  .role{position:relative;width:36px;height:32px;border-radius:9px;display:grid;place-items:center;color:var(--muted);
+    transition:background .2s,color .2s;cursor:default}
+  .role:hover{background:rgba(255,255,255,.07);color:var(--text)}
+  .role svg{width:17px;height:17px}
+  .role .tip{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translate(-50%,4px);white-space:nowrap;
+    font:500 11px Inter,sans-serif;background:#161a24;border:1px solid var(--line);color:var(--text);
+    padding:5px 8px;border-radius:7px;opacity:0;pointer-events:none;transition:.18s}
+  .role:hover .tip{opacity:1;transform:translate(-50%,0)}
+
+  .bio{margin-top:20px;text-align:center;font-size:17px;color:#d6d9e2;min-height:1.5em}
+  .caret{display:inline-block;width:2px;height:1.1em;background:var(--accent);vertical-align:-3px;margin-left:2px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+
+  .meta{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 16px;margin-top:14px;color:var(--muted);font-size:13.5px}
+  .meta span{display:inline-flex;align-items:center;gap:6px}
+  .meta svg{width:14px;height:14px;opacity:.8}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:26px}
+  .stat{border:1px solid var(--line);background:var(--tile);border-radius:14px;padding:12px 8px;text-align:center}
+  .stat b{display:block;font-size:20px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat small{font:400 11px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
+
+  /* github live */
+  .gh{display:flex;align-items:center;gap:14px;margin-top:10px;padding:14px 16px;border:1px solid var(--line);
+    background:var(--tile);border-radius:18px;transition:background .2s,border-color .2s}
+  .gh:hover{background:var(--tile-hover);border-color:var(--line-strong)}
+  .gh-av{position:relative;flex:none;width:48px;height:48px}
+  .gh-av img,.gh-av .ph{width:48px;height:48px;border-radius:50%;background:#1a1e29;object-fit:cover;display:block}
+  .gh-av i{position:absolute;right:-1px;bottom:-1px;width:13px;height:13px;border-radius:50%;background:var(--accent);border:3px solid #10131b}
+  .gh-body{min-width:0;flex:1}
+  .gh-title{display:flex;align-items:center;gap:7px;font-weight:600;font-size:15px}
+  .gh-title svg{width:16px;height:16px}
+  .gh-sub{color:var(--muted);font-size:13px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gh-sub b{color:var(--text);font-weight:600}
+  .gh-arrow{color:var(--dim);transition:transform .2s,color .2s}
+  .gh:hover .gh-arrow{transform:translateX(3px);color:var(--text)}
+
+  /* projects */
+  .section-h{display:flex;align-items:center;justify-content:space-between;margin:28px 2px 12px}
+  .section-h h2{font:500 12px var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.12em}
+  .filters{display:flex;gap:4px}
+  .filter{font:500 11.5px var(--mono);color:var(--dim);background:none;border:1px solid transparent;border-radius:8px;padding:5px 8px;cursor:pointer;transition:.2s}
+  .filter:hover{color:var(--text)}
+  .filter.on{color:var(--text);border-color:var(--line);background:rgba(255,255,255,.04)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .proj{
+    position:relative;display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:16px;
+    border:1px solid var(--line);background:var(--tile);overflow:hidden;
+    transition:transform .25s cubic-bezier(.2,.8,.2,1),border-color .25s,opacity .3s;
+  }
+  .proj::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .25s;
+    background:radial-gradient(220px circle at var(--mx,50%) var(--my,50%),rgba(255,255,255,.09),transparent 60%)}
+  .proj:hover{transform:translateY(-2px);border-color:var(--line-strong)}
+  .proj:hover::before{opacity:1}
+  .proj.hide{display:none}
+  .ico{flex:none;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;color:#fff;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.25),0 6px 16px -6px var(--glow,rgba(0,0,0,.5))}
+  .ico svg{width:21px;height:21px}
+  .proj-body{min-width:0}
+  .proj h3{font-size:15px;font-weight:650;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
+  .proj p{color:var(--muted);font-size:12.5px;line-height:1.4;margin-top:3px;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .proj .foot{display:flex;align-items:center;gap:10px;margin-top:8px;font:400 11px var(--mono);color:var(--dim)}
+  .lang-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:0}
+  .star{display:inline-flex;align-items:center;gap:3px}
+  .star svg{width:11px;height:11px}
+  .badge{font:600 9.5px var(--mono);color:var(--accent);border:1px solid rgba(52,211,153,.35);background:rgba(52,211,153,.08);
+    padding:2px 5px;border-radius:5px;letter-spacing:.04em}
+
+  /* activity */
+  .activity{margin-top:10px;border:1px solid var(--line);background:var(--tile);border-radius:16px;padding:14px 16px}
+  .act-row{display:flex;gap:10px;align-items:baseline;font-size:13px;color:var(--muted);padding:6px 0}
+  .act-row + .act-row{border-top:1px dashed var(--line)}
+  .act-row b{color:var(--text);font-weight:600}
+  .act-row time{margin-left:auto;flex:none;font:400 11px var(--mono);color:var(--dim)}
+  .act-ic{flex:none;width:6px;height:6px;border-radius:50%;background:var(--accent);transform:translateY(-2px)}
+  .act-empty{color:var(--dim);font-size:13px}
+
+  footer{margin-top:26px;padding-top:18px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+  .links{display:flex;gap:8px}
+  .icon-btn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);transition:.2s;background:rgba(255,255,255,.02);cursor:pointer}
+  .icon-btn:hover{color:var(--text);border-color:var(--line-strong);background:rgba(255,255,255,.06)}
+  .icon-btn svg{width:17px;height:17px}
+  .clock{font:400 12px var(--mono);color:var(--dim);text-align:right}
+  .clock b{color:var(--muted);font-weight:500}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;z-index:10;
+    background:#141824;border:1px solid var(--line-strong);color:var(--text);font-size:13px;padding:10px 14px;border-radius:10px;transition:.25s;pointer-events:none}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:560px){
+    .card{padding:36px 18px 20px;border-radius:24px}
+    .grid{grid-template-columns:1fr}
+    .bio{font-size:15.5px}
+    .filters{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<canvas id="space" aria-hidden="true"></canvas>
+<div class="vignette"></div>
+
+<div class="topbar">
+  <button class="pill-btn" id="motionBtn" title="Animasyon"><span data-i18n="motion">Hareket</span> <b id="motionState">açık</b></button>
+  <button class="pill-btn" id="langBtn" title="Dil / Language"><b id="langCur">TR</b> / <span id="langAlt">EN</span></button>
+</div>
+
+<main>
+  <article class="card" id="card">
+    <div class="avatar-wrap">
+      <div class="avatar-ring"></div>
+      <div class="avatar">
+        <svg viewBox="0 0 120 120" aria-label="MY">
+          <defs>
+            <linearGradient id="ag" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#34d399"/><stop offset="1" stop-color="#38bdf8"/>
+            </linearGradient>
+          </defs>
+          <rect width="120" height="120" fill="#0b0d14"/>
+          <circle cx="60" cy="60" r="44" fill="url(#ag)" opacity=".12"/>
+          <text x="60" y="74" text-anchor="middle" font-family="Inter,Arial" font-weight="800" font-size="40" fill="url(#ag)" letter-spacing="-2">MY</text>
+        </svg>
+      </div>
+      <span class="status-dot" title="Çevrimiçi"></span>
+    </div>
+
+    <h1>Mert Yeşil</h1>
+    <div class="handle">@mertyesileducation</div>
+
+    <div class="roles"><div class="roles-inner">
+      <span class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg><span class="tip" data-i18n="r1">Web Geliştirici</span></span>
+      <span class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg><span class="tip" data-i18n="r2">Eğitim Teknolojileri</span></span>
+      <span class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="tip" data-i18n="r3">Akıllı Tahta</span></span>
+      <span class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg><span class="tip" data-i18n="r4">Güvenlik (2FA)</span></span>
+      <span class="role"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2Z"/><path d="M14 2v6h6M8 13h8M8 17h5"/></svg><span class="tip" data-i18n="r5">Ofis Uygulamaları</span></span>
+    </div></div>
+
+    <p class="bio"><span id="typed"></span><span class="caret"></span></p>
+
+    <div class="meta">
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>Mert Yeşil Eğitim</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/></svg>HTML · JavaScript · PHP · CSS</span>
+      <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg><span data-i18n="loc">Türkiye</span></span>
+    </div>
+
+    <div class="stats">
+      <div class="stat"><b id="sRepos">7</b><small data-i18n="sRepos">Proje</small></div>
+      <div class="stat"><b id="sStars">1</b><small data-i18n="sStars">Yıldız</small></div>
+      <div class="stat"><b id="sDays">—</b><small data-i18n="sDays">Gün önce</small></div>
+    </div>
+
+    <a class="gh" id="gh" href="https://github.com/mertyesileducation" target="_blank" rel="noopener">
+      <div class="gh-av"><img id="ghAv" src="https://github.com/mertyesileducation.png?size=96" alt="" onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'ph'}))"><i></i></div>
+      <div class="gh-body">
+        <div class="gh-title"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>mertyesileducation</div>
+        <div class="gh-sub" id="ghSub"><span data-i18n="loading">Yükleniyor…</span></div>
+      </div>
+      <svg class="gh-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M7 7h10v10"/></svg>
+    </a>
+
+    <div class="section-h">
+      <h2 data-i18n="projects">Projeler</h2>
+      <div class="filters" id="filters">
+        <button class="filter on" data-f="all" data-i18n="all">Tümü</button>
+        <button class="filter" data-f="edu" data-i18n="fEdu">Eğitim</button>
+        <button class="filter" data-f="office" data-i18n="fOffice">Ofis</button>
+        <button class="filter" data-f="tool" data-i18n="fTool">Araç</button>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+
+    <div class="section-h"><h2 data-i18n="activity">Son Aktivite</h2></div>
+    <div class="activity" id="activity"><div class="act-empty" data-i18n="loading">Yükleniyor…</div></div>
+
+    <footer>
+      <div class="links">
+        <a class="icon-btn" href="https://github.com/mertyesileducation" target="_blank" rel="noopener" aria-label="GitHub"><svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38v-1.33c-2.23.48-2.7-1.07-2.7-1.07-.36-.92-.89-1.17-.89-1.17-.73-.5.06-.49.06-.49.8.06 1.23.83 1.23.83.72 1.23 1.88.87 2.34.67.07-.52.28-.87.5-1.07-1.78-.2-3.65-.89-3.65-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48v2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
+        <a class="icon-btn" href="https://github.com/mertyesileducation/MY-Egitim" target="_blank" rel="noopener" aria-label="MY-Eğitim"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg></a>
+        <button class="icon-btn" id="shareBtn" aria-label="Paylaş"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+      </div>
+      <div class="clock"><span data-i18n="localTime">İstanbul saati</span><br><b id="clock">--:--</b></div>
+    </footer>
+  </article>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const USER = "mertyesileducation";
+  const SELF_REPO = "mertyesileducaiton.github.io";
+
+  /* ---------------- i18n ---------------- */
+  const T = {
+    tr: {
+      motion:"Hareket", on:"açık", off:"kapalı",
+      r1:"Web Geliştirici", r2:"Eğitim Teknolojileri", r3:"Akıllı Tahta", r4:"Güvenlik (2FA)", r5:"Ofis Uygulamaları",
+      loc:"Türkiye", sRepos:"Proje", sStars:"Yıldız", sDays:"Son push", loading:"Yükleniyor…",
+      projects:"Projeler", all:"Tümü", fEdu:"Eğitim", fOffice:"Ofis", fTool:"Araç",
+      activity:"Son Aktivite", localTime:"İstanbul saati", copied:"Bağlantı kopyalandı",
+      pushedTo:"{r} deposuna push", created:"{r} oluşturuldu", starred:"{r} yıldızlandı", other:"{r} üzerinde etkinlik",
+      repos:"repo", followers:"takipçi", following:"takip", noAct:"Henüz herkese açık aktivite yok.",
+      justNow:"az önce", m:"dk önce", h:"sa önce", d:"gün önce", new:"YENİ",
+      bios:["Eğitim için yazılım geliştiriyorum.","Yerli ve açık alternatifler üretiyorum.","Akıllı tahtadan sunuma, her şey tarayıcıda.","Öğretmenler için daha kolay araçlar."],
+      desc:{
+        "MY-Egitim":"Mert Yeşil Eğitim Portalı — dersler ve teknolojiler",
+        "Present":"Türkiye'nin yerli sunum platformu · .present & .pptx",
+        "EasyWrite":"Word'ün muadili, tarayıcıda çalışan editör",
+        "Mert-Auth":"2FA kodlarını anında üreten, sayaçlı PHP aracı",
+        "Akilli-Tahta-Smart-Board-":"Sınıflar için web tabanlı akıllı tahta",
+        "System":"Sistem altyapısı ve deneysel çalışmalar"
+      }
+    },
+    en: {
+      motion:"Motion", on:"on", off:"off",
+      r1:"Web Developer", r2:"EdTech", r3:"Smart Board", r4:"Security (2FA)", r5:"Office Apps",
+      loc:"Türkiye", sRepos:"Projects", sStars:"Stars", sDays:"Last push", loading:"Loading…",
+      projects:"Projects", all:"All", fEdu:"Education", fOffice:"Office", fTool:"Tools",
+      activity:"Recent Activity", localTime:"Istanbul time", copied:"Link copied",
+      pushedTo:"Pushed to {r}", created:"Created {r}", starred:"Starred {r}", other:"Activity on {r}",
+      repos:"repos", followers:"followers", following:"following", noAct:"No public activity yet.",
+      justNow:"just now", m:"m ago", h:"h ago", d:"d ago", new:"NEW",
+      bios:["I build software for education.","Making local, open alternatives.","From smart boards to slides — all in the browser.","Simpler tools for teachers."],
+      desc:{
+        "MY-Egitim":"Mert Yeşil Education Portal — lessons & tech",
+        "Present":"A homegrown presentation platform · .present & .pptx",
+        "EasyWrite":"A Word alternative that runs in the browser",
+        "Mert-Auth":"PHP tool that generates 2FA codes with a countdown",
+        "Akilli-Tahta-Smart-Board-":"Web-based smart board for classrooms",
+        "System":"System infrastructure & experiments"
+      }
+    }
+  };
+  let lang = (() => { try { return localStorage.getItem("lang") || (navigator.language||"tr").slice(0,2) } catch { return "tr" } })();
+  if (!T[lang]) lang = "en";
+  const t = k => T[lang][k] ?? k;
+
+  /* ---------------- projects ---------------- */
+  const ICONS = {
+    edu:'<path d="M22 10 12 5 2 10l10 5 10-5Z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+    present:'<path d="M3 3h18M4 3v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3"/><path d="m8 21 4-5 4 5"/><path d="m9 11 2-2 2 2 3-3"/>',
+    write:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    auth:'<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.2"/>',
+    board:'<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="m7 11 3-3 3 3 4-4"/>',
+    system:'<rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/>'
+  };
+  const PROJECTS = [
+    { name:"MY-Egitim", title:"MY-Eğitim", icon:"edu", cat:"edu", grad:"#10b981,#0ea5e9", lang:"HTML", stars:1, updated:"2026-10-02T20:46:39Z" },
+    { name:"Present", title:"Present", icon:"present", cat:"office", grad:"#f97316,#ef4444", lang:"JavaScript", stars:0, updated:"2026-10-04T15:49:07Z" },
+    { name:"EasyWrite", title:"EasyWrite", icon:"write", cat:"office", grad:"#3b82f6,#6366f1", lang:"JavaScript", stars:0, updated:"2026-10-05T15:20:25Z" },
+    { name:"Mert-Auth", title:"Mert-Auth", icon:"auth", cat:"tool", grad:"#a855f7,#ec4899", lang:"PHP", stars:0, updated:"2026-10-01T15:05:24Z" },
+    { name:"Akilli-Tahta-Smart-Board-", title:"Akıllı Tahta", icon:"board", cat:"edu", grad:"#14b8a6,#22c55e", lang:"HTML", stars:0, updated:"2026-10-01T14:06:28Z" },
+    { name:"System", title:"System", icon:"system", cat:"tool", grad:"#64748b,#334155", lang:null, stars:0, updated:"2026-10-14T17:55:02Z" }
+  ];
+  const LANG_COLORS = { HTML:"#e34c26", JavaScript:"#f1e05a", PHP:"#4F5D95", CSS:"#563d7c", TypeScript:"#3178c6" };
+
+  const ago = iso => {
+    const s = (Date.now() - new Date(iso)) / 1000;
+    if (s < 90) return t("justNow");
+    if (s < 3600) return Math.round(s/60) + " " + t("m");
+    if (s < 86400) return Math.round(s/3600) + " " + t("h");
+    return Math.round(s/86400) + " " + t("d");
+  };
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  let filter = "all";
+  function renderProjects(){
+    const grid = document.getElementById("grid");
+    grid.innerHTML = PROJECTS.map(p => {
+      const [a,b] = p.grad.split(",");
+      const fresh = Date.now() - new Date(p.updated) < 3*86400e3;
+      return `<a class="proj${filter!=="all"&&p.cat!==filter?" hide":""}" href="https://github.com/${USER}/${p.name}" target="_blank" rel="noopener">
+        <div class="ico" style="background:linear-gradient(135deg,${a},${b});--glow:${a}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[p.icon]}</svg></div>
+        <div class="proj-body">
+          <h3>${esc(p.title)}${fresh?` <span class="badge">${t("new")}</span>`:""}</h3>
+          <p>${esc(T[lang].desc[p.name] || p.description || "")}</p>
+          <div class="foot">
+            ${p.lang?`<span><i class="lang-dot" style="background:${LANG_COLORS[p.lang]||"#888"}"></i>${esc(p.lang)}</span>`:""}
+            <span class="star"><svg viewBox="0 0 24 24" fill="currentColor"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1Z"/></svg>${p.stars}</span>
+            <span>${ago(p.updated)}</span>
+          </div>
+        </div></a>`;
+    }).join("");
+    grid.querySelectorAll(".proj").forEach(el => el.addEventListener("pointermove", e => {
+      const r = el.getBoundingClientRect();
+      el.style.setProperty("--mx", (e.clientX-r.left)+"px");
+      el.style.setProperty("--my", (e.clientY-r.top)+"px");
+    }));
+  }
+  document.getElementById("filters").addEventListener("click", e => {
+    const b = e.target.closest(".filter"); if (!b) return;
+    filter = b.dataset.f;
+    document.querySelectorAll(".filter").forEach(x => x.classList.toggle("on", x===b));
+    renderProjects();
+  });
+
+  /* ---------------- GitHub live data ---------------- */
+  let gh = { user:null, events:null };
+  function renderStats(){
+    const total = PROJECTS.length;
+    const stars = PROJECTS.reduce((n,p)=>n+(p.stars||0),0);
+    const last = PROJECTS.reduce((m,p)=> p.updated>m ? p.updated : m, "");
+    const lastEvt = gh.events && gh.events[0] ? gh.events[0].created_at : last;
+    document.getElementById("sRepos").textContent = gh.user ? gh.user.public_repos : total + 1;
+    document.getElementById("sStars").textContent = stars;
+    document.getElementById("sDays").textContent = ago(lastEvt).replace(/ (önce|ago)$/,"");
+  }
+  function evtText(e){
+    const r = `<b>${esc(e.repo.name.split("/")[1])}</b>`;
+    if (e.type === "PushEvent") return t("pushedTo").replace("{r}", r);
+    if (e.type === "CreateEvent") return t("created").replace("{r}", r);
+    if (e.type === "WatchEvent") return t("starred").replace("{r}", r);
+    return t("other").replace("{r}", r);
+  }
+  function renderGh(){
+    const sub = document.getElementById("ghSub");
+    const u = gh.user;
+    const counts = u ? ` · ${u.public_repos} ${t("repos")} · ${u.followers} ${t("followers")} · ${u.following} ${t("following")}` : "";
+    const ev = gh.events && gh.events[0];
+    if (ev) sub.innerHTML = `${evtText(ev)} · ${ago(ev.created_at)}<span style="font-family:var(--mono);font-size:11.5px;color:var(--dim)">${counts}</span>`;
+    else if (u) sub.innerHTML = `<span style="font-family:var(--mono);font-size:12px">${counts.slice(3)}</span>`;
+    else sub.textContent = "github.com/" + USER;
+
+    const act = document.getElementById("activity");
+    if (gh.events && gh.events.length){
+      // collapse consecutive duplicates (same type + repo)
+      const rows = [];
+      for (const e of gh.events){
+        const last = rows[rows.length-1];
+        if (last && last.type===e.type && last.repo.name===e.repo.name) continue;
+        rows.push(e); if (rows.length>=4) break;
+      }
+      act.innerHTML = rows.map(e => `<div class="act-row"><span class="act-ic"></span><span>${evtText(e)}</span><time>${ago(e.created_at)}</time></div>`).join("");
+    } else if (gh.events) {
+      act.innerHTML = `<div class="act-empty">${t("noAct")}</div>`;
+    } else {
+      // offline fallback: build from known repo update times
+      act.innerHTML = [...PROJECTS].sort((a,b)=>b.updated.localeCompare(a.updated)).slice(0,4)
+        .map(p => `<div class="act-row"><span class="act-ic"></span><span>${t("pushedTo").replace("{r}",`<b>${esc(p.name)}</b>`)}</span><time>${ago(p.updated)}</time></div>`).join("");
+    }
+  }
+  async function loadGitHub(){
+    const get = u => fetch(u, { headers:{ Accept:"application/vnd.github+json" } }).then(r => r.ok ? r.json() : Promise.reject(r.status));
+    const [user, events, repos] = await Promise.allSettled([
+      get(`https://api.github.com/users/${USER}`),
+      get(`https://api.github.com/users/${USER}/events/public?per_page=30`),
+      get(`https://api.github.com/users/${USER}/repos?per_page=100&sort=pushed`)
+    ]);
+    if (user.status==="fulfilled") gh.user = user.value;
+    if (events.status==="fulfilled") gh.events = events.value;
+    if (repos.status==="fulfilled"){
+      for (const r of repos.value){
+        if (r.fork || r.name===SELF_REPO) continue;
+        const p = PROJECTS.find(x => x.name===r.name);
+        if (p){ p.stars = r.stargazers_count; p.updated = r.pushed_at || r.updated_at; p.lang = r.language || p.lang; }
+        else PROJECTS.push({ name:r.name, title:r.name, description:r.description, icon:"system", cat:"tool",
+          grad:"#475569,#1e293b", lang:r.language, stars:r.stargazers_count, updated:r.pushed_at||r.updated_at });
+      }
+      PROJECTS.sort((a,b)=> b.stars-a.stars || b.updated.localeCompare(a.updated));
+    }
+    renderAll();
+  }
+
+  /* ---------------- typing bio ---------------- */
+  let typeTimer, bioIdx = 0;
+  function typeLoop(){
+    clearTimeout(typeTimer);
+    const el = document.getElementById("typed");
+    const lines = t("bios");
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !motion){ el.textContent = lines[0]; return; }
+    let i = 0, del = false, text = lines[bioIdx % lines.length];
+    el.textContent = "";
+    const step = () => {
+      if (!del){
+        el.textContent = text.slice(0, ++i);
+        if (i === text.length){ del = true; typeTimer = setTimeout(step, 2200); return; }
+        typeTimer = setTimeout(step, 38 + Math.random()*50);
+      } else {
+        el.textContent = text.slice(0, --i);
+        if (i === 0){ del = false; bioIdx++; text = lines[bioIdx % lines.length]; typeTimer = setTimeout(step, 350); return; }
+        typeTimer = setTimeout(step, 18);
+      }
+    };
+    step();
+  }
+
+  /* ---------------- render/i18n ---------------- */
+  function applyLang(){
+    document.documentElement.lang = lang;
+    document.querySelectorAll("[data-i18n]").forEach(el => { const v = T[lang][el.dataset.i18n]; if (typeof v==="string") el.textContent = v; });
+    document.getElementById("langCur").textContent = lang.toUpperCase();
+    document.getElementById("langAlt").textContent = lang==="tr" ? "EN" : "TR";
+    document.getElementById("motionState").textContent = motion ? t("on") : t("off");
+  }
+  function renderAll(){ applyLang(); renderProjects(); renderStats(); renderGh(); }
+
+  document.getElementById("langBtn").addEventListener("click", () => {
+    lang = lang==="tr" ? "en" : "tr";
+    try { localStorage.setItem("lang", lang) } catch {}
+    renderAll(); typeLoop();
+  });
+
+  const toast = msg => { const el = document.getElementById("toast"); el.textContent = msg; el.classList.add("show"); setTimeout(()=>el.classList.remove("show"), 1800); };
+  document.getElementById("shareBtn").addEventListener("click", async () => {
+    const url = location.href;
+    if (navigator.share) { try { await navigator.share({ title:"Mert Yeşil", url }); return; } catch {} }
+    try { await navigator.clipboard.writeText(url); toast(t("copied")); } catch { toast(url); }
+  });
+
+  const clock = () => {
+    document.getElementById("clock").textContent = new Intl.DateTimeFormat(lang==="tr"?"tr-TR":"en-GB",
+      { hour:"2-digit", minute:"2-digit", second:"2-digit", timeZone:"Europe/Istanbul" }).format(new Date());
+  };
+  setInterval(clock, 1000); clock();
+
+  /* ---------------- card tilt ---------------- */
+  const card = document.getElementById("card");
+  const fine = matchMedia("(pointer:fine)").matches;
+  if (fine) window.addEventListener("pointermove", e => {
+    if (!motion) return;
+    const x = e.clientX / innerWidth - .5, y = e.clientY / innerHeight - .5;
+    card.style.transform = `perspective(1400px) rotateY(${x*3}deg) rotateX(${-y*3}deg)`;
+  });
+
+  /* ---------------- space: stars + black hole ---------------- */
+  const cv = document.getElementById("space"), cx = cv.getContext("2d");
+  let W, H, DPR, stars = [], disk = [], streaks = [], mouse = { x:0, y:0, tx:0, ty:0 };
+  let motion = (() => { try { return localStorage.getItem("motion") !== "off" } catch { return true } })();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) motion = false;
+
+  function resize(){
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W*DPR; cv.height = H*DPR; cx.setTransform(DPR,0,0,DPR,0,0);
+    const n = Math.round(W*H/2600);
+    stars = Array.from({length:n}, () => ({
+      x:Math.random()*W, y:Math.random()*H, z:Math.random()**2, // depth 0..1
+      tw:Math.random()*Math.PI*2, ts:.5+Math.random()*2,
+      hue: Math.random()<.15 ? (Math.random()<.5?"#ffd2a8":"#a8c8ff") : "#ffffff"
+    }));
+    const R = hole().R;
+    disk = Array.from({length: W<600 ? 1400 : 3200}, () => {
+      const u = Math.random();
+      const r = R*(1.55 + 5.2*u*u); // denser near the inner edge
+      return { r, a:Math.random()*Math.PI*2, s:.9+Math.random()*.2, sz: Math.random()<.92 ? .9 : 1.8 };
+    });
+  }
+  function hole(){
+    const R = Math.max(42, Math.min(W, H) * (W<600 ? .16 : .19));
+    return { x: W*.5 + mouse.x*-14, y: H*.42 + mouse.y*-10, R };
+  }
+  function diskColor(rn, bright){ // rn 0 (inner) .. 1 (outer)
+    const r = 255, g = Math.round(235 - rn*140), b = Math.round(200 - rn*175);
+    return `rgba(${r},${g},${Math.max(b,20)},${bright})`;
+  }
+
+  let last = performance.now(), time = 0;
+  function frame(now){
+    const dt = Math.min(50, now-last)/1000; last = now;
+    if (motion) time += dt;
+    mouse.x += (mouse.tx-mouse.x)*.05; mouse.y += (mouse.ty-mouse.y)*.05;
+
+    cx.globalCompositeOperation = "source-over";
+    cx.fillStyle = "#05060a"; cx.fillRect(0,0,W,H);
+
+    // nebula haze
+    const h = hole();
+    const neb = cx.createRadialGradient(h.x, h.y, h.R*.5, h.x, h.y, Math.max(W,H)*.7);
+    neb.addColorStop(0,"rgba(255,140,60,.10)"); neb.addColorStop(.35,"rgba(120,60,160,.05)"); neb.addColorStop(1,"rgba(0,0,0,0)");
+    cx.fillStyle = neb; cx.fillRect(0,0,W,H);
+
+    // stars with parallax + gentle lensing push away from hole
+    for (const s of stars){
+      let x = s.x + mouse.x*-30*s.z, y = s.y + mouse.y*-30*s.z;
+      const dx = x-h.x, dy = y-h.y, d2 = dx*dx+dy*dy, d = Math.sqrt(d2);
+      const push = (h.R*h.R*1.1)/(d+1);
+      x += dx/d*push; y += dy/d*push;
+      if (d < h.R*1.05) continue;
+      const tw = .55 + .45*Math.sin(time*s.ts + s.tw);
+      cx.globalAlpha = (.25 + .75*s.z) * tw;
+      cx.fillStyle = s.hue;
+      const sz = .5 + s.z*1.4;
+      cx.fillRect(x, y, sz, sz);
+    }
+    cx.globalAlpha = 1;
+
+    // streaks (dust flying past)
+    if (motion && Math.random() < .05 && streaks.length < 8){
+      const ang = Math.random()*Math.PI*2, dist = Math.max(W,H)*.7;
+      streaks.push({ x:h.x+Math.cos(ang)*dist, y:h.y+Math.sin(ang)*dist, ang, life:1 });
+    }
+    cx.lineCap = "round";
+    for (let i=streaks.length-1;i>=0;i--){
+      const s = streaks[i]; s.life -= dt*.7;
+      const sp = 260*dt; s.x -= Math.cos(s.ang)*sp; s.y -= Math.sin(s.ang)*sp;
+      if (s.life<=0){ streaks.splice(i,1); continue; }
+      cx.strokeStyle = `rgba(255,255,255,${.35*s.life})`; cx.lineWidth = 1;
+      cx.beginPath(); cx.moveTo(s.x,s.y); cx.lineTo(s.x+Math.cos(s.ang)*16, s.y+Math.sin(s.ang)*16); cx.stroke();
+    }
+
+    const tilt = .2, R = h.R, rMin = R*1.55, rSpan = R*5.2;
+    cx.globalCompositeOperation = "lighter";
+
+    // big soft glow
+    const glow = cx.createRadialGradient(h.x, h.y, R*.9, h.x, h.y, R*5);
+    glow.addColorStop(0,"rgba(255,190,120,.35)"); glow.addColorStop(.25,"rgba(255,120,40,.12)"); glow.addColorStop(1,"rgba(0,0,0,0)");
+    cx.fillStyle = glow; cx.fillRect(h.x-R*5, h.y-R*5, R*10, R*10);
+
+    const drawParticle = (front) => {
+      for (const p of disk){
+        if (motion) p.a += dt * p.s * 1.15 * Math.pow(rMin/p.r, 1.5);
+        const sin = Math.sin(p.a), cos = Math.cos(p.a);
+        if ((sin > 0) !== front) continue;
+        const rn = (p.r - rMin)/rSpan;
+        const dop = 1 + .55*cos;             // approaching side brighter
+        const b = Math.min(1, (1-rn)*.8*dop + .08);
+        cx.fillStyle = diskColor(rn, b);
+        cx.fillRect(h.x + p.r*cos, h.y + p.r*sin*tilt, p.sz*1.3, p.sz*.9);
+      }
+    };
+    const drawLensed = (top) => {
+      for (const p of disk){
+        const sin = Math.sin(p.a), cos = Math.cos(p.a);
+        if (top ? sin >= 0 : sin <= 0) continue;
+        const rn = (p.r - rMin)/rSpan;
+        const rl = R*1.08 + (p.r - rMin)*.28;
+        const b = Math.min(1, (1-rn)*(top?.45:.18)*(1+.55*cos));
+        cx.fillStyle = diskColor(rn*.6, b);
+        cx.fillRect(h.x + rl*cos, h.y + rl*sin*(top?1:.85), 1.1, 1.1);
+      }
+    };
+
+    const band = (rIn, rOut, sy, top, alpha) => {
+      cx.save(); cx.translate(h.x, h.y); cx.scale(1, sy);
+      const g = cx.createRadialGradient(0,0,rIn, 0,0,rOut);
+      g.addColorStop(0, `rgba(255,236,205,${alpha})`);
+      g.addColorStop(.12, `rgba(255,190,110,${alpha*.75})`);
+      g.addColorStop(.4, `rgba(230,110,40,${alpha*.3})`);
+      g.addColorStop(1, "rgba(120,40,10,0)");
+      cx.fillStyle = g; cx.beginPath();
+      if (top){ cx.arc(0,0,rOut,Math.PI,Math.PI*2); cx.arc(0,0,rIn,Math.PI*2,Math.PI,true); }
+      else    { cx.arc(0,0,rOut,0,Math.PI);          cx.arc(0,0,rIn,Math.PI,0,true); }
+      cx.closePath(); cx.fill(); cx.restore();
+    };
+    const outer = rMin + rSpan;
+    band(rMin*.95, outer, tilt, true, .55);   // back half of disk (glow)
+    drawParticle(false);   // back half of disk
+    band(R*1.02, R*1.9, 1, true, .5);    // lensed back disk arching over the top
+    band(R*1.02, R*1.5, .9, false, .2);  // faint secondary image underneath
+    drawLensed(true);      // lensed image of back disk arching over the top
+    drawLensed(false);     // faint secondary image underneath
+
+    // shadow
+    cx.globalCompositeOperation = "source-over";
+    const sh = cx.createRadialGradient(h.x, h.y, R*.7, h.x, h.y, R*1.12);
+    sh.addColorStop(0,"#000"); sh.addColorStop(.85,"#000"); sh.addColorStop(1,"rgba(0,0,0,0)");
+    cx.fillStyle = sh; cx.beginPath(); cx.arc(h.x, h.y, R*1.12, 0, Math.PI*2); cx.fill();
+
+    // photon ring
+    cx.globalCompositeOperation = "lighter";
+    cx.strokeStyle = "rgba(255,215,170,.55)"; cx.lineWidth = 1.4;
+    cx.shadowColor = "rgba(255,160,80,.9)"; cx.shadowBlur = 14;
+    cx.beginPath(); cx.arc(h.x, h.y, R*1.02, 0, Math.PI*2); cx.stroke();
+    cx.shadowBlur = 0;
+
+    band(rMin*.95, outer, tilt, false, .65);
+    drawParticle(true);    // front half crosses in front of the shadow
+
+    cx.globalCompositeOperation = "source-over";
+    if (motion) requestAnimationFrame(frame);
+  }
+  addEventListener("pointermove", e => { mouse.tx = e.clientX/innerWidth - .5; mouse.ty = e.clientY/innerHeight - .5; });
+  addEventListener("resize", () => { resize(); if (!motion) requestAnimationFrame(frame); });
+
+  document.getElementById("motionBtn").addEventListener("click", () => {
+    motion = !motion;
+    try { localStorage.setItem("motion", motion ? "on" : "off") } catch {}
+    applyLang(); typeLoop();
+    if (motion){ last = performance.now(); requestAnimationFrame(frame); }
+    else card.style.transform = "";
+  });
+
+  resize();
+  requestAnimationFrame(frame);
+  renderAll();
+  typeLoop();
+  loadGitHub();
+  setInterval(() => { renderProjects(); renderStats(); renderGh(); }, 60e3);
+})();
+</script>
+</body>
+</html>
